@@ -18,6 +18,7 @@ class SetNode:
     Attributes:
         _parent (SetNode): Zeiger auf den Eltern-Knoten (self bei Wurzeln).
         _weight (int): Anzahl der Knoten im Teilbaum.
+        _praktikumsgruppe (int): Nummer der Gruppe im Praktikum
     """
 
     # TODO for students: die Klasse user.User erbt von SetNode. diese Klasse wird eigentlich erst in Praktikum 3 benötigt.
@@ -33,7 +34,7 @@ class SetNode:
         Raises:
             None
         """
-        # TODO for students (Praktikum 1): ergänzen Sie hier die private Membervariable _praktikumsgruppe
+        self._praktikumsgruppe:  Optional[int] = None
 
         # TODO: werden nur für Praktikum 3 benötigt
         self._parent: SetNode = self   # parent Knoten des SetNode Objekts. self bedeutet, dass der Knoten ein Wurzelknoten ist
@@ -41,11 +42,17 @@ class SetNode:
         # Alternative: Rank-based Quick Union
         # self._rank = 0
 
-    # *** PUBLIC SET methods ***
+    # *** PUBLIC methods to return class properties ***
+    @property
+    def praktikumsgruppe(self):
+        return self._praktikumsgruppe
 
     # TODO: implementieren Sie in Praktikum 3 die benötigten Methoden
 
-    # *** PUBLIC methods to return class properties ***
+    # *** PUBLIC SET methods ***
+    @praktikumsgruppe.setter
+    def praktikumsgruppe(self, value):
+        self._praktikumsgruppe = value 
 
     # TODO: implementieren Sie in Praktikum 3 die benötigten Methoden
 
@@ -114,8 +121,8 @@ class Praktikumsgruppen(dict):
         Raises:
             None
         """
-        # TODO: implement in Praktikum 1
-        pass
+        for i, u in enumerate(user_ids):
+            self[u].praktikumsgruppe = groupnumbers[i]
 
     # *** PUBLIC GET methods ***
 
@@ -131,8 +138,12 @@ class Praktikumsgruppen(dict):
         Raises:
             KeyError: Falls `user_id` nicht im Wörterbuch existiert.
         """
-        # TODO: implement in Praktikum 1
-        pass
+        group: List[str] = []
+
+        for u in self:
+            if (self[u].praktikumsgruppe == self[user_id].praktikumsgruppe):
+                group.append(u)
+        return group
 
     def print_ds(self) -> None:
         """Gibt die Disjoint-Set-Struktur aus.

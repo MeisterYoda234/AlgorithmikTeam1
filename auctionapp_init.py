@@ -17,6 +17,7 @@ from collections import Counter
 
 import marketplace.auctions
 import sys
+import time
 
 THEME = {
     "bg_app": "#F1F5F9",
@@ -1000,11 +1001,18 @@ class AuctionAppInit:
         """
         search_text = self.search_entry.get()
         if search_text:
+            trieStart = time.perf_counter()
             suggestions = self.trie.search(search_text)
-            # TODO for students (Praktikum 1): nutzen Sie hier die Vorschläge des AVL-Baums und vergleichen Sie
-            #  die Laufzeit mit der des Tries
-            # avl_suggestions = self.avl_tree.find_most_likely_words(search_text)
-            self.show_tooltip(suggestions)
+            trieEnd = time.perf_counter()
+            trieTime = (trieEnd-trieStart) * 1000
+            print(f"Zeit die der Trie benötigt: {trieTime:.6f}ms")
+            
+            avlStart = time.perf_counter()
+            avl_suggestions = self.avl_tree.find_most_likely_words(search_text)
+            avlEnd = time.perf_counter()
+            avlTime = (avlEnd-avlStart) * 1000
+            print(f"Zeit die der AVL Baum benötigt: {avlTime:.6f}ms\n")
+            self.show_tooltip(avl_suggestions)
         else:
             self.hide_tooltip()
 
@@ -1259,6 +1267,10 @@ class AuctionAppInit:
         for product_name, count in tuple_list:
             self.trie.insert(product_name)
             self.avl_tree.insert(product_name, count)
+
+        for u in self._users:
+            self.trie.insert(u)
+            self.avl_tree.insert(u, 1)
 
     def rebuild_trie(self) -> None:
         """Baut Trie und AVL-Baum neu auf, damit auch neu erstellte Auktionen vorgeschlagen werden.

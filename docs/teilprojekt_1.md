@@ -29,7 +29,7 @@ nav_exclude: true
 - Welcher ADT wird in der Klasse `systemmessages.py` genutzt und warum? Als welche Datenstruktur wird der ADT implementiert?  
 - Wie wird gespeichert in welcher Reihenfolge die Gebote auf eine Auktion abgegeben wurden? Wie erhält man das zuletzt abgegebene Gebot? (s. `auction.py`)  
 - Wenn Sie nach einem Produkt suchen, werden Ihnen in einem Tooltip Autoergänzungsvorschläge angezeigt, auf die Sie klicken können. Die Datenstruktur dahinter ist ein Trie, s. `trie.py`. Informieren Sie sich über Tries (s. Vorlesungsfolien). Erweitern Sie die Initialisierung des Tries so, dass Sie im Suchfeld auch nach Nutzer-IDs suchen können (s. `auctionapp_init.py`: `initialize_trie()`).  
-- Diese Autoergänzung kann auch durch einen AVL-Baum implementiert werden. Schauen Sie sich die Klasse `AVLTree` in `avl_tree.py` an und dort insbesondere die Methode `find_most_likely_words()`. Ändern Sie die Methode `show_suggestions()` in `auctionapp_init.py`, sodass die Vorschläge vom AVL-Baum genutzt werden. Können Sie Unterschiede in der Laufzeit zwischen der Trie- und der AVL-Baum-Implementierung feststellen?  
+- Diese Autoergänzung kann auch durch einen AVL-Baum implementiert werden. Schauen Sie sich die Klasse `AVLTree` in `avl_tree.py` an und dort insbesondere die Methode `find_most_likely_words()`. Ändern Sie die Methode `show_suggestions()` in `auctionapp_init.py`, sodass die Vorschläge vom AVL-Baum genutzt werden. Können Sie Unterschiede in der Laufzeit zwischen der Trie- und der AVL-Baum-Implementierung feststellen?
 
 ### 3. Hashfunktion verbessern
 
