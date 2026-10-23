@@ -34,11 +34,12 @@ class SetNode:
         Raises:
             None
         """
-        self._praktikumsgruppe:  Optional[int] = None
+        self._praktikumsgruppe:  Optional[int] = None #Prak_1
 
         # TODO: werden nur für Praktikum 3 benötigt
         self._parent: SetNode = self   # parent Knoten des SetNode Objekts. self bedeutet, dass der Knoten ein Wurzelknoten ist
         self._weight: int = 1      # Gewicht (Anzahl Knoten) des (Teil-)Baumes, der in dem SetNode Objekt verwurzelt ist
+    
         # Alternative: Rank-based Quick Union
         # self._rank = 0
 
@@ -121,8 +122,8 @@ class Praktikumsgruppen(dict):
         Raises:
             None
         """
-        for i, u in enumerate(user_ids):
-            self[u].praktikumsgruppe = groupnumbers[i]
+        for i, u in enumerate(user_ids):                       # Prak_1
+            self[u]._praktikumsgruppe = groupnumbers[i]
 
     # *** PUBLIC GET methods ***
 
@@ -140,8 +141,8 @@ class Praktikumsgruppen(dict):
         """
         group: List[str] = []
 
-        for u in self:
-            if (self[u].praktikumsgruppe == self[user_id].praktikumsgruppe):
+        for u in self:                                                          # Prak_1
+            if (self[u]._praktikumsgruppe == self[user_id]._praktikumsgruppe):
                 group.append(u)
         return group
 
