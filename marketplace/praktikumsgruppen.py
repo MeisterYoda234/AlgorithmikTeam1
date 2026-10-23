@@ -34,7 +34,7 @@ class SetNode:
         Raises:
             None
         """
-        self._praktikumsgruppe:  Optional[int] = None #Prak_1
+        self.praktikumsgruppe:  Optional[int] = None #Prak_1
 
         # TODO: werden nur für Praktikum 3 benötigt
         self._parent: SetNode = self   # parent Knoten des SetNode Objekts. self bedeutet, dass der Knoten ein Wurzelknoten ist
@@ -123,7 +123,7 @@ class Praktikumsgruppen(dict):
             None
         """
         for i, u in enumerate(user_ids):                       # Prak_1
-            self[u]._praktikumsgruppe = groupnumbers[i]
+            self[u].praktikumsgruppe = groupnumbers[i]
 
     # *** PUBLIC GET methods ***
 
@@ -142,7 +142,7 @@ class Praktikumsgruppen(dict):
         group: List[str] = []
 
         for u in self:                                                          # Prak_1
-            if (self[u]._praktikumsgruppe == self[user_id]._praktikumsgruppe):
+            if (self[u].praktikumsgruppe == self[user_id]._praktikumsgruppe):
                 group.append(u)
         return group
 
