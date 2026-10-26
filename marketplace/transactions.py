@@ -154,4 +154,4 @@ class Transactions:
                 hash_value * 31 + ord(character)
             ) % self._capacity
 
-            return hash_value
+        return hash_value
