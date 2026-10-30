@@ -10,11 +10,12 @@ Top-User ermittelt sowie die Ansichten der Benutzeroberfläche aktualisiert.
 
 # main file
 
-from typing import Any
+from typing import Any, Optional
 import tkinter as tk
 import threading
 
 from auctionapp_init import AuctionAppInit
+from marketplace.max_heap import MaxHeap
 
 
 class AuctionApp(AuctionAppInit):
@@ -36,6 +37,9 @@ class AuctionApp(AuctionAppInit):
         """
         super().__init__(root)
 
+        self._activity_heap = MaxHeap()
+        self._last_top_auction_id: Optional[str] = None
+
         self.start_update_timer()
 
     # *** Alle 30 Sekunden wird überprüft welche Auktionen abgelaufen sind und die Listen werden aktualisiert ***
@@ -53,14 +57,32 @@ class AuctionApp(AuctionAppInit):
         """
         self._check_auctions_expiry()
 
-        top_auction = self._auctions.get_top_auction(True)
+        # Bieterzahlen laufender Auktionen mit dem bestehenden Heap abgleichen.
+        active_ids = set()
+        for auction_id, auction in list(self._auctions.items()):
+            if not auction.expired() and not auction.sold():
+                active_ids.add(auction_id)
+                bid_count = auction.bid_count()
+                old_bid_count = self._activity_heap.get_auction_bidders(auction_id)
+                if old_bid_count is None:
+                    self._activity_heap.add_auction(auction_id, bid_count)
+                elif old_bid_count != bid_count:
+                    self._activity_heap.update_bidders(auction_id, bid_count)
 
-        if top_auction is not None:
+        for auction_id in set(self._activity_heap.auction_map) - active_ids:
+            self._activity_heap.remove(auction_id)
+
+        top_auction = self._activity_heap.get_auction_with_max_bidders()
+        top_auction_id = top_auction[1] if top_auction is not None else None
+
+        if top_auction is not None and top_auction_id != self._last_top_auction_id:
             self.system_messages.push(
-                "Die TOP Auktion mit {0} Geboten ist Auktion {1} in der man ein {2} für aktuell {3} € ersteigern kann.".format(
+                "Die TOP Auktion mit {0} Bietern ist Auktion {1} in der man ein {2} für aktuell {3} € ersteigern kann.".format(
                     top_auction[0], top_auction[1], self._auctions.get_item_name(top_auction[1]),
                     self._auctions.get_highest_bid(top_auction[1])
                 ))
+
+        self._last_top_auction_id = top_auction_id
 
         top_user = self._auctions.get_top_rated_user(True)
 
