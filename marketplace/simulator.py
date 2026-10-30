@@ -11,6 +11,7 @@ import threading
 import random
 import time
 import marketplace.users
+import marketplace.max_heap_users
 
 
 class Simulator:
@@ -60,7 +61,7 @@ class Simulator:
         #     random_user = random.choice(user_ids)
         #     random_auction = random.choice(auction_ids)
         #
-        #     min_bid = auctions.get_item_value_min(random_auction)
+        #     min_bid = auctions.item_value_min(random_auction)
         #
         #     random_bid = min_bid + random.randint(1, 50)
         #     auctions.bid_in_auction(random_auction, users[random_user], random_bid)
@@ -102,12 +103,13 @@ class Simulator:
 
         # threading.Timer(30, self.create_random_auctions, args=(auctions, current_user_id)).start()
 
-    def randomly_rate_users(self, users: marketplace.users.Users, current_user_id: str) -> None:
+    def randomly_rate_users(self, users: marketplace.users.Users, current_user_id: str, heap_users_rated: marketplace.max_heap_users.MaxHeapUsers) -> None:
         """Vergibt zufällige Sterne-Bewertungen an Benutzer.
 
         Args:
             users (marketplace.users.Users): Die Users-Instanz.
             current_user_id (str): ID des aktuellen Benutzers.
+            heap_users_rated (marketplace.max_heap_users.MaxHeapUsers): Die Heap-Instanz
 
         Returns:
             None
@@ -123,9 +125,13 @@ class Simulator:
         for _ in range(35):
             random_user = random.choice(user_ids)
             stars = random.randint(1, 5)
-            # TODO for students (Praktikum 2): damit Ihre Datenstruktur für den am besten bewerteten User aktuell
-            #  bleibt, muss sie nach jeder Bewertung aktualisiert werden. Dafür dürfen Sie diese Methode anpassen.
+
             users[random_user].rate_user(stars)
+            new_rating = users[random_user].get_rating_stars_mean()
+            if heap_users_rated.get_user_stars(random_user) is None:
+                heap_users_rated.add_user(random_user, new_rating)
+            else:
+                heap_users_rated.update_user(random_user, new_rating)
 
     def stop(self) -> None:
         """Stoppt die Ausführung der Simulation.

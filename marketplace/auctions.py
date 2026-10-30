@@ -15,6 +15,7 @@ import marketplace.item
 import marketplace.users
 import marketplace.simulator
 from marketplace.max_heap import MaxHeap
+from marketplace.max_heap_users import MaxHeapUsers
 from marketplace.transactions import Transaction, Transactions
 from datetime import datetime
 import random
@@ -61,12 +62,7 @@ class Auctions(dict):
         except NotImplementedError:
             self._heap = None
 
-        # TODO for students: für 2. Praktikum: erstelle hier ein MaxHeap, um den besten User/Verkäufer mit der Methode
-        #  get_top_rated_user() (s.u.) in konstanter Zeit zurück geben zu können. auf der GUI gibt es noch keinen Button
-        #  mit dem Sie andere Nutzer bewerten können. das wird alles simuliert in simulator.py. Sie können von jedem
-        #  User über die Methode user.User.get_rating_stars_mean() die mittlere Anzahl Sterne abfragen.
-        #  Nach jeder Bewertung muss die Datenstruktur aktualisiert werden, s. simulator.Simulator.randomly_rate_users().
-        self._heap_users_rated: Optional[Any] = None
+        self._heap_users_rated: MaxHeapUsers = MaxHeapUsers()
 
         # 1024 Buckets: in 30 Minuten entstehen einige hundert Transaktionen. Bei nur 128 Buckets wären ab der
         # 129. Transaktion Kollisionen unvermeidbar und der Effekt einer besseren Hashfunktion kaum sichtbar.
@@ -640,28 +636,14 @@ class Auctions(dict):
         Raises:
             None
         """
-        # TODO for students: do not use this part
-        # stupid brute force implementation
-        max_user: Optional[str] = None
-        max_stars: float = 0.0
-        for user_id, user in self._users.items():
-            stars_mean = user.get_rating_stars_mean()
-            if stars_mean > max_stars:
-                max_stars = stars_mean
-                max_user = user_id
 
+        top_user = self._heap_users_rated.get_top_user()
+        if top_user is None:
+            return None
         if with_num_stars:
-            return [max_stars, max_user]
+            return top_user
         else:
-            return max_user
-
-        # TODO for students: instead use and probably change this
-        # if not self._heap_users_rated:
-        #     return None
-        # if with_num_stars:
-        #     return self._heap_users_rated.get_top_user()
-        # else:
-        #     return self._heap_users_rated.get_top_user()[1]
+            return top_user[1]
 
     def get_active_auctions(self) -> Dict[str, marketplace.auction.Auction]:
         """Gibt alle nicht abgewickelten/nicht verkauften Auktionen zurück.
@@ -790,7 +772,7 @@ class Auctions(dict):
 
         self._my_simulator.create_random_auctions(self, current_user_id)
 
-        self._my_simulator.randomly_rate_users(self._users, current_user_id)
+        self._my_simulator.randomly_rate_users(self._users, current_user_id, self._heap_users_rated)
 
         next_elapsed = elapsed_seconds + 30
         if next_elapsed < max_duration:
