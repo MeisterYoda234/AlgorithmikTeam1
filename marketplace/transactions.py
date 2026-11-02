@@ -145,13 +145,19 @@ class Transactions:
     # TODO: Erstellt eine bessere Hashfunktion, welche möglichst wenig Kollisionen generiert
     def _hash_fn(self, tx: Transaction) -> int:
 
-        # Speicher Variable
         hash_value = 0
 
-        # Schleife die den Produkt Namen Buchstabe für Buchstabe durchgeht!
-        for character in tx.product_name.lower():
-            hash_value = (
-                hash_value * 31 + ord(character)
-            ) % self._capacity
+        for attribute in (
+            tx.seller,
+            tx.buyer,
+            tx.price,
+            tx.timestamp.isoformat(),
+            tx.product_name,
+        ):
+            value = str(attribute)
+            for character in f"{len(value)}:{value}":
+                hash_value = (
+                    hash_value * 31 + ord(character)
+                ) % self._capacity
 
         return hash_value
