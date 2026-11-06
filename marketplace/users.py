@@ -255,6 +255,9 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
 
         # TODO for students: Implement this method
 
+   
+
+
         return False
 
     # *** PUBLIC STATIC methods ***
