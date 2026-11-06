@@ -254,8 +254,23 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
             return False
 
         # TODO for students: Implement this method
+        visited = {user_id1}
+        current_level = [user_id1]
+        
+        for _ in range(degree):
+            next_level = []
 
-   
+            for user_id in current_level:
+                for friend in self[user_id].friends():
+                    if friend == user_id2:
+                        return True
+
+                    if friend not in visited:
+                        visited.add(friend)
+                        next_level.append(friend)
+
+                current_level = next_level
+
 
 
         return False
