@@ -221,7 +221,15 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
         mutual_friends_count = self.get_mutual_friends(user_id)
         # TODO for students: Implement this method by filling the list suggested_friends
 
-        suggested_friends = []
+        suggested_friends = [
+            friend
+            for friend, count in sorted(
+                mutual_friends_count.items(),
+                key=lambda item: item[1],
+                reverse=True
+            )
+            if count >= num_common_friends
+        ]
 
         if pretty_print:
             suggested_friends = [self[friend].pretty_print() for friend in suggested_friends]
