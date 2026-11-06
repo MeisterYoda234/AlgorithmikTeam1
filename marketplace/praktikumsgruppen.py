@@ -34,7 +34,7 @@ class SetNode:
         Raises:
             None
         """
-        self.praktikumsgruppe:  Optional[int] = None #Prak_1
+       # self.praktikumsgruppe:  Optional[int] = None #Prak_1
 
         # TODO: werden nur für Praktikum 3 benötigt
         self._parent: SetNode = self   # parent Knoten des SetNode Objekts. self bedeutet, dass der Knoten ein Wurzelknoten ist
@@ -173,41 +173,45 @@ class Praktikumsgruppen(dict):
             root1.weight = root1.weight + root2.weight
 
     def create_groups(self, user_ids: List[str], groupnumbers: List[int]) -> None:
-        """Erstellt Praktikumsgruppen aus Benutzer-IDs und Gruppennummern.
+        """Erstellt Praktikumsgruppen aus Benutzer-IDs und Gruppennummern."""
+        
+        # Benutzer anhand ihrer Gruppennummer in einem Dictionary sammeln
+        groups_map = {}
+        for uid, gnum in zip(user_ids, groupnumbers):
+            if gnum not in groups_map:
+                groups_map[gnum] = []
+            groups_map[gnum].append(uid)
+            
+        #Alle Benutzer derselben Gruppe über union() zu Bäumen zusammenlegen
+        for members in groups_map.values():
+            if len(members) > 1:
+                first_member = members[0] # Der Erste dient als Ankerpunkt
+                for other_member in members[1:]:
+                    # Nutzt die union() Methode 
+                    self.union(first_member, other_member)
 
-        Args:
-            user_ids (List[str]): Liste von Benutzer-IDs.
-            groupnumbers (List[int]): Zuordnende Gruppennummern.
-
-        Returns:
-            None
-
-        Raises:
-            None
-        """
-        for i, u in enumerate(user_ids):                       # Prak_1
-            self[u].praktikumsgruppe = groupnumbers[i]
 
     # *** PUBLIC GET methods ***
 
+    
     def get_groupmembers(self, user_id: str) -> List[str]:
-        """Gibt eine Liste aller Gruppenmitglieder der Gruppe des Benutzers zurück.
+        """Gibt eine Liste aller Gruppenmitglieder der Gruppe des Benutzers zurück."""
+        if user_id not in self:
+            raise KeyError(f"Benutzer {user_id} nicht im Wörterbuch existent.")
+            
+        groupmembers = []
+        
+        #Wurzel (Repräsentant) des gesuchten Users ermitteln
+        target_root = self.find_byid(user_id) 
+        
+        # Prüfen, welche User in der Disjunkten Menge denselben Repräsentanten haben
 
-        Args:
-            user_id (str): Benutzer-ID.
-
-        Returns:
-            List[str]: Liste von Benutzer-IDs der Gruppenmitglieder.
-
-        Raises:
-            KeyError: Falls `user_id` nicht im Wörterbuch existiert.
-        """
-        group: List[str] = []
-
-        for u in self:                                                          # Prak_1
-            if (self[u].praktikumsgruppe == self[user_id]._praktikumsgruppe):
-                group.append(u)
-        return group
+        for uid, user_node in self.items():
+            # self.find() liefert die Wurzel des jeweiligen Knotens
+            if self.find(user_node) == target_root:
+                groupmembers.append(uid)
+                
+        return groupmembers
 
     def print_ds(self) -> None:
         """Gibt die Disjoint-Set-Struktur aus.
