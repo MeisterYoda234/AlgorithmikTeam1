@@ -48,14 +48,24 @@ class SetNode:
     def praktikumsgruppe(self):
         return self._praktikumsgruppe
 
-    # TODO: implementieren Sie in Praktikum 3 die benötigten Methoden
+    def parent(self):
+        return self._parent
+
+    @property
+    def weight(self):
+        return self._weight
 
     # *** PUBLIC SET methods ***
     @praktikumsgruppe.setter
     def praktikumsgruppe(self, value):
         self._praktikumsgruppe = value 
 
-    # TODO: implementieren Sie in Praktikum 3 die benötigten Methoden
+    def set_parent(self, value):
+        self._parent = value
+
+    @weight.setter
+    def weight(self, value):
+        self._weight = value
 
 class Praktikumsgruppen(dict):
     """Klasse zur Repräsentation einer Sammlung disjunkter Mengen (Praktikumsgruppen).
@@ -89,13 +99,33 @@ class Praktikumsgruppen(dict):
 
     # *** PUBLIC methods ***
 
-    # TODO in Praktikum 3: implement find(node), find_byid(user_id, return_id=False) and 
-    #  union(user_id1, user_id2)
+    def find(self, node: SetNode) -> SetNode:
+        """Findet die Wurzel der Menge, in der sich der Knoten befindet, mit Pfadverkürzung.
+
+        Args:
+            node (SetNode): Knoten (User-Objekt), dessen Wurzel gesucht wird.
+
+        Returns:
+            SetNode: Die Wurzel der Menge.
+
+        Raises:
+            None
+        """
+        # Wurzel suchen: hochlaufen, bis ein Knoten auf sich selbst zeigt
+        root = node
+        while root.parent() is not root:
+            root = root.parent()
+
+        # Pfadverkürzung: jeden Knoten auf dem Weg direkt an die Wurzel hängen
+        while node is not root:
+            next_node = node.parent()
+            node.set_parent(root)
+            node = next_node
+
+        return root
 
     def find_byid(self, user_id: str, return_id: bool = False) -> Union[Any, str]:
         """Findet die Wurzel der Praktikumsgruppe eines Benutzers anhand seiner ID.
-
-        TODO students: die Methode existiert in der Studierendenversion nur aus Kompatibilitätsgründen und wird im 3. Praktikum implementiert
 
         Args:
             user_id (str): Benutzer-ID.
@@ -107,7 +137,40 @@ class Praktikumsgruppen(dict):
         Raises:
             KeyError: Falls `user_id` nicht im Wörterbuch existiert.
         """
-        return user_id
+        root = self.find(self[user_id])
+        if return_id:
+            return root.id()
+        return root
+
+    def union(self, user_id1: str, user_id2: str) -> None:
+        """Vereinigt die Mengen (Praktikumsgruppen) der beiden Benutzer (weighted Quick-Union).
+
+        Der kleinere Baum wird unter die Wurzel des größeren gehängt, damit die Bäume flach bleiben.
+
+        Args:
+            user_id1 (str): Erste Benutzer-ID.
+            user_id2 (str): Zweite Benutzer-ID.
+
+        Returns:
+            None
+
+        Raises:
+            KeyError: Falls eine der IDs nicht im Wörterbuch existiert.
+        """
+        root1 = self.find_byid(user_id1)
+        root2 = self.find_byid(user_id2)
+
+        # schon in derselben Gruppe
+        if root1 is root2:
+            return
+
+        # kleineren Baum unter den größeren hängen und Gewicht der neuen Wurzel erhöhen
+        if root1.weight < root2.weight:
+            root1.set_parent(root2)
+            root2.weight = root2.weight + root1.weight
+        else:
+            root2.set_parent(root1)
+            root1.weight = root1.weight + root2.weight
 
     def create_groups(self, user_ids: List[str], groupnumbers: List[int]) -> None:
         """Erstellt Praktikumsgruppen aus Benutzer-IDs und Gruppennummern.
