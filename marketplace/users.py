@@ -17,6 +17,9 @@ Passwortüberprüfung, Freundschaftsempfehlung, Abstands- und Verbindungsberechn
 from typing import Any, Dict, List, Optional, Tuple, Union
 import ast
 import csv
+import os
+import networkx as nx
+import osmnx as ox
 import marketplace.user
 import marketplace.praktikumsgruppen
 
@@ -26,7 +29,20 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
 
     Attributes:
         _groupnumbers (List[int]): Liste der Gruppennummern der eingelesenen Benutzer.
+        MAP_FILE (str): Datei, in der der Straßengraph lokal gespeichert wird.
+        ROAD_FILTER (str): osmnx-Filter, damit nur größere Straßen (inkl. Auf-/Abfahrten) geladen werden.
+        _map_graph (Optional[nx.MultiDiGraph]): Straßengraph, wird nur einmal geladen.
+        _map_nodes (Dict[str, int]): Nächster Knoten im Straßengraph je Benutzer-ID.
+        _distance_cache (Dict[Tuple[str, str], float]): Bereits berechnete Fahrstrecken in km.
     """
+
+    # Straßengraph für das Gebiet aller Wohnorte: einmal herunterladen, lokal speichern, danach nur laden
+    MAP_FILE: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nrw_roads.graphml")
+    ROAD_FILTER: str = ('["highway"~"motorway|motorway_link|trunk|trunk_link|'
+                        'primary|primary_link|secondary|secondary_link"]')
+    _map_graph: Optional[nx.MultiDiGraph] = None
+    _map_nodes: Dict[str, int] = {}
+    _distance_cache: Dict[Tuple[str, str], float] = {}
 
     # *** CONSTRUCTORS ***
     def __init__(self, csvfile: str, *args: Any) -> None:
@@ -66,25 +82,27 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
         self[user_id] = marketplace.user.User(user_id, password, name_family, name_first, gps_coord, address)
 
     def calc_distance_between_users(self, user_id1: str, user_id2: str) -> float:
-        """Calculates distance between GPS coordinates of two users.
+        """Berechnet die Fahrstrecke zwischen den Wohnorten zweier Benutzer (kürzester Weg im Straßengraph).
 
         Args:
             user_id1 (str): First user ID.
             user_id2 (str): Second user ID.
 
         Returns:
-            float: Calculated distance between the two users.
+            float: Länge der kürzesten Route in km, `inf`, falls es keine Route gibt.
         """
-        # TODO for students: calculate distance between gps coordinates of user1 and user2 using a map and an
-        #  algorithm that calculates the shortest distance on the map
-
-        user1 = self[user_id1]
-        user2 = self[user_id2]
-
-        # TODO for students: replace this naive implementation of manhattan distance with distance gotten
-        #  from graph algorithm
-        distance = sum(abs(a - b) for a, b in zip(user1.gps_coords(), user2.gps_coords()))
-        return float(distance)
+        key = (user_id1, user_id2)
+        if key not in self._distance_cache:
+            graph = self._get_map_graph()
+            origin = self._get_map_node(user_id1)
+            destination = self._get_map_node(user_id2)
+            path = ox.routing.shortest_path(graph, origin, destination, weight="length")
+            if path is None:
+                distance = float("inf")
+            else:
+                distance = nx.path_weight(graph, path, weight="length") / 1000
+            self._distance_cache[key] = distance
+        return self._distance_cache[key]
 
     # *** PUBLIC GET methods ***
 
@@ -200,7 +218,7 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
         return mutual_friends_count
 
     def suggest_friends(self, user_id: str, num_common_friends: int = 2,
-                        distance_threshold: float = 0.1, pretty_print: bool = True) -> List[str]:
+                        distance_threshold: float = 20.0, pretty_print: bool = True) -> List[str]:
         """Suggests users to the given user_id that
         (1) are friends with at least num_common_friends friends of user_id or
         (2) that live nearby the given user_id (closer as distance_threshold) and are friends of friends of friends...
@@ -210,6 +228,7 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
             user_id (str): usually the current user id
             num_common_friends (int): only suggest users that are at least friends with two of the user_ids friends
             distance_threshold (float): only suggest users that live closer to the given user_id as this threshold value
+                (Fahrstrecke in km)
             pretty_print (bool): if True, then call pretty_print() on all suggested friends before returning them
 
         Returns:
@@ -230,6 +249,21 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
             )
             if count >= num_common_friends
         ]
+
+        # (2) Nutzer, die über das Freundesnetzwerk verbunden sind und näher als distance_threshold wohnen,
+        #     sortiert nach Fahrstrecke (direkter Nachbar zuerst)
+        friends = self[user_id].friends()
+        nearby = []
+        for other_id in self:
+            if other_id == user_id or other_id in friends or other_id in suggested_friends:
+                continue
+            if not self.are_users_connected(user_id, other_id):
+                continue
+            distance = self.calc_distance_between_users(user_id, other_id)
+            if distance < distance_threshold:
+                nearby.append((distance, other_id))
+        nearby.sort()
+        suggested_friends += [other_id for distance, other_id in nearby]
 
         if pretty_print:
             suggested_friends = [self[friend].pretty_print() for friend in suggested_friends]
@@ -278,6 +312,40 @@ class Users(marketplace.praktikumsgruppen.Praktikumsgruppen):
     # *** PUBLIC STATIC methods ***
 
     # *** PRIVATE methods ***
+
+    def _get_map_graph(self) -> nx.MultiDiGraph:
+        """Lädt den Straßengraph einmal: aus MAP_FILE, sonst per Download über eine Bounding Box um alle Wohnorte.
+
+        Returns:
+            nx.MultiDiGraph: Straßengraph für das Gebiet aller Benutzer.
+        """
+        if Users._map_graph is None:
+            if os.path.exists(Users.MAP_FILE):
+                Users._map_graph = ox.load_graphml(Users.MAP_FILE)
+            else:
+                lats = [user.gps_coords()[0] for user in self.values()]
+                lons = [user.gps_coords()[1] for user in self.values()]
+                margin = 0.1    # ca. 10 km Rand, damit Wohnorte am Rand noch Straßen haben
+                # Bounding Box in der Reihenfolge (left, bottom, right, top) = (min Länge, min Breite, max Länge, max Breite)
+                bbox = (min(lons) - margin, min(lats) - margin, max(lons) + margin, max(lats) + margin)
+                Users._map_graph = ox.graph.graph_from_bbox(bbox, custom_filter=Users.ROAD_FILTER)
+                ox.save_graphml(Users._map_graph, Users.MAP_FILE)
+        return Users._map_graph
+
+    def _get_map_node(self, user_id: str) -> int:
+        """Gibt den Knoten im Straßengraph zurück, der dem Wohnort des Benutzers am nächsten liegt.
+
+        Args:
+            user_id (str): Benutzer-ID.
+
+        Returns:
+            int: ID des nächsten Knotens.
+        """
+        if user_id not in self._map_nodes:
+            lat, lon = self[user_id].gps_coords()
+            # nearest_nodes erwartet erst den Längengrad (X), dann den Breitengrad (Y)
+            self._map_nodes[user_id] = ox.distance.nearest_nodes(self._get_map_graph(), lon, lat)
+        return self._map_nodes[user_id]
 
     def _read_users_from_csvfile(self, csvfile: str) -> None:
         """

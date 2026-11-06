@@ -169,3 +169,5 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+# osmnx Download-Cache (der Straßengraph *.graphml wird über Git LFS versioniert, s. .gitattributes)
+cache/
